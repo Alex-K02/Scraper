@@ -1,34 +1,15 @@
-import requests, vars, re, datetime
+
+import vars
+
+import requests
+import pandas as pd
+import xml.etree.ElementTree as ET
+import datetime
 from bs4 import BeautifulSoup
-from urllib import robotparser
+from urllib.robotparser import RobotFileParser
 import cohere, time
-#for multiple looping
-import itertools
+from news_please.newsplease import NewsPlease
 
-## Robots exclusion standard
-def can_fetch(url, user_agent='*'):
-    domain = url.split('/')[2]
-    robots_url = f"https://{domain}/robots.txt"
-    rp = robotparser.RobotFileParser()
-    rp.set_url(robots_url)
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Ensure we notice bad responses
-        response.encoding = 'utf-8'  # Try utf-8 encoding first
-        rp.parse(response.text.splitlines())
-    except UnicodeDecodeError:
-        try:
-            response.encoding = 'ISO-8859-1'  # Fallback to ISO-8859-1 encoding
-            rp.parse(response.text.splitlines())
-        except UnicodeDecodeError:
-            response.encoding = 'windows-1252'  # Fallback to windows-1252 encoding
-            rp.parse(response.text.splitlines())
-    return rp.can_fetch(user_agent, url)
-
-##TODO: site scraping from different websites 
-# Mb stick with this idea: scan website for all <a> elemets
-# and then just search through them finding the searched links
-## data base or mb other options
 def tag_splitting(data):
     client = cohere.Client(
         vars.COHERE_API_KEY
@@ -42,97 +23,81 @@ def tag_splitting(data):
     for key in response.text.split(", "):
         print(f"{str.lower(key)}\n")
 
-def web_scraping(current_datetime:str, urls, max_result:int):
-    search_URLs = ["https://thehackernews.com/"]
-    for link in search_URLs:
-        if can_fetch(link):
-            #for a sraping only current date needed
-            #datetime.today().strftime('%Y-%m-%d')
-            if not current_datetime:
-                #current_datetime = datetime.datetime.now.isoformat()
-                current_datetime = "2024-06-19T16:19:00%2B05:30"
-            if not max_result:
-                max_result = 9
-            
-            ## TODO: check idea with scraping all the "a" elements and then defining the links that are searched
 
-            #updated-max={datetime}&max-result={max_result}
-            for day in range(19, 20):
-                jql_query = f"{search_URLs[0]}search?updated-max=2024-06-{day}T16:19:00%2B05:30&max-result={max_result}"
-                request = requests.get(jql_query)
-                #check if query was succesful
-                if request.status_code == 200:
-                    soup = BeautifulSoup(request.content, 'html.parser')
-                    pages = soup.find_all('div', class_='body-post')
-                    story_links = [page.find('a', class_='story-link') for page in pages] 
-                    links = [link['href'] for link in story_links]
-                    print(links)
-                    #page_scraping
-                else:
-                    print(request.status_code)
-                time.sleep(5)
-                print("\n")
-        else:
-            print(f"Fetching is not allowed by robots.txt: {link}")
-            return None
-        
-        
+## Robots exclusion standard
+def get_robots_txt(url: str) -> str:
+    robots_url = f"https://{url}/robots.txt"
+    response = requests.get(robots_url)
+    response.raise_for_status()  # Ensure we notice bad responses
+    return response
 
-def page_scraping(link):
-    #only for test(can be removed)
-    if can_fetch(link):
-        request = requests.get(link)
-        soup = BeautifulSoup(request.content, 'html.parser')
+def parse_robots_txt(response: requests.Response) -> RobotFileParser:
+    rp = RobotFileParser()
+    rp.set_url(response.url)
+    try:
+        response.encoding = 'utf-8'  # Try utf-8 encoding first
+        rp.parse(response.text.splitlines())
+    except UnicodeDecodeError:
+        try:
+            response.encoding = 'ISO-8859-1'  # Fallback to ISO-8859-1 encoding
+            rp.parse(response.text.splitlines())
+        except UnicodeDecodeError:
+            response.encoding = 'windows-1252'  # Fallback to windows-1252 encoding
+            rp.parse(response.text.splitlines())
+    return rp
 
-        title_text_elements = []
-        article_text_elements = []
-        
-        for (text_filter, title_filter) in itertools.zip_longest(vars.article_text_filters, vars.title_text_filters):
-            #filter by some filters
-            text_elements = soup.find_all('div', class_=text_filter)
-            title_elems = soup.find_all(vars.title_tags)
-            if soup.find_all(vars.title_tags) and not title_text_elements:
-                title_text_elements = page_elements_filtering(title_elems, vars.title_text_filters, vars.title_tags)
-            #go through the filtered element and find text
-            if soup.find_all('div', class_=text_filter) and not article_text_elements:
-                article_text_elements = page_elements_filtering(text_elements, vars.article_text_filters, vars.text_tags)
+def fetch_and_parse_robots(site_map_url: str) -> str:
+    response = get_robots_txt(site_map_url)
+    rp = parse_robots_txt(response)
+    #check for proper site map
+    for site_map in rp.site_maps():
+        cleared_map = site_map.removeprefix("https://").replace(site_map_url, "")
+        for tag in vars.site_maps_tags:
+            if bool(tag.search(cleared_map)):
+                return site_map
+    return rp.site_maps()
 
-        ##
-        article_text_elements = [item.get_text().strip() for sublist in article_text_elements for item in sublist]
-        title_text_elements = [item.get_text().strip() for sublist in title_text_elements for item in sublist]
-            
-
-        return title_text_elements + article_text_elements
+def analyze_map(map:str, last_download:str) -> list:
+    request = requests.get(map)
+    if request:
+        tree = ET.ElementTree(ET.fromstring(request.text))
     else:
-        print(f"Fetching is not allowed by robots.txt: {link}")
-        return None
-    # tag_splitting(article_text)
+        return "No possible"
+    root = tree.getroot()
+    namespaces = {'ns0': 'http://www.sitemaps.org/schemas/sitemap/0.9', 'ns1': 'http://www.google.com/schemas/sitemap-news/0.9'}
+    
+    articles = []
+    for url in root.findall('ns0:url', namespaces):
+        link = url.find('ns0:loc', namespaces).text
+        news = url.find('ns1:news', namespaces)
+        pub_date = news.find('ns1:publication_date', namespaces).text if news.find('ns1:publication_date', namespaces).text else 'N/A'
+        publication = news.find('ns1:publication', namespaces)
+        title = news.find('ns1:title', namespaces).text if publication else 'N/A'
+        if not last_download or datetime.datetime.fromisoformat(pub_date) > datetime.datetime.fromisoformat(last_download):
+            articles.append({
+                "link": link,
+                "pub_date": pub_date,
+                "title": title
+            })
+    return articles
 
-def page_elements_filtering(page_elements, filters, tags):
-    output = []
-    check = []
-    for element in page_elements:
-        for new_filter in filters:
-            res = element.find_all(tags, class_=new_filter)
-            if res:
-                output.extend(res)
-                return output
-        res = element.find_all(tags)
-        if res and not check:
-            check.extend(res)
-        elif not check:
-            check.append(element)
 
-    return output if output else check
+def web_scraping(site_urls: list):
+    articles = []
+    for site_link in site_urls:
+        #use robot file to get to sitemap
+        current_site_maps = fetch_and_parse_robots(site_link)
+        #analyzing site map
+        latest_article_links = analyze_map(current_site_maps, "2024-07-18T00:00:00+00:00")
+        for index, page_link in enumerate(latest_article_links):
+            articles.append(NewsPlease.from_url(page_link["link"]))
+            print(articles[index].title)
+    #time.sleep(5)   
+    #ai analyze and db insertion
+        
         
 def main():
-    #web_scraping(None,None, 9)
-    # check ny times(it didnt work)https://www.nytimes.com/2024/06/26/technology/ai-consultants.html
-    #https://www.wired.com/story/labgenius-antibody-factory-machine-learning/
-
-    ## check this one (the author text is also copied) => https://www.techradar.com/computing/artificial-intelligence/this-new-ai-voice-assistant-beat-openai-to-one-of-chatgpts-most-anticipated-features
-    # and this one https://www.pcworld.com/article/2387530/hacker-leaked-10-billion-passwords-heres-what-to-do.html
-    print(page_scraping("https://www.pcworld.com/article/2387530/hacker-leaked-10-billion-passwords-heres-what-to-do.html"))
+    web_scraping(vars._tech_websites)
 
 if __name__ == "__main__":
     main()
