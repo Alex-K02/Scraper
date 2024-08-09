@@ -1,15 +1,20 @@
 
-import vars
-from news_please.newsplease import NewsPlease 
+import os, sys
+from .news_please.newsplease import NewsPlease 
+#from dataFetching import vars
+#from dataFetching.news_please.newsplease import NewsPlease
 import requests, logging
 import xml.etree.ElementTree as ET
 import datetime, re
 from dateutil import parser
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse
-import cohere
-from selenium_extractor import SeleniumExtractor as SE
+from .selenium_extractor import SeleniumExtractor as SE
 
+PARENT_DIR = os.path.abspath(os.path.curdir)
+sys.path.insert(0, PARENT_DIR)
+
+import vars
 
 # Set the global logging level
 logging.basicConfig(level=logging.ERROR)
@@ -25,24 +30,11 @@ logging.getLogger("PIL.Image").setLevel(logging.WARNING)
 # Set the logging level for specific loggers to ERROR or CRITICAL to reduce verbosity
 logging.getLogger("news_please").setLevel(logging.WARNING)
 logging.getLogger("newsplease.crawler.response_decoder").setLevel(logging.ERROR)
-logging.getLogger("news_please.newsplease.pipeline.extractor.article_extractor").setLevel(logging.ERROR)
+logging.getLogger("dataFetching.news_please.newsplease.pipeline.extractor.article_extractor").setLevel(logging.ERROR)
 logging.getLogger("newspaper.network").setLevel(logging.ERROR)
 
 
 class WebScraper:
-    def tag_splitting(data):
-        client = cohere.Client(
-            vars.AI_API_KEY
-        )
-        response = client.chat(
-            message = f"""You are a language model trained to analyze text and identify important keywords. Your task is to extract a list of the most relevant keywords from the given article. A keyword is defined as a significant word or phrase that represents the main topics or themes of the article. Please provide a list of 10 keywords separated by commas.
-                Article: {data}
-                Keywords:
-                """
-        )
-        for key in response.text.split(", "):
-            print(f"{str.lower(key)}\n")
-
 
     def get_robots_txt(self, url: str) -> str:
         '''Robots exclusion standard'''
@@ -86,7 +78,7 @@ class WebScraper:
 
         if not response:
             try: 
-                response = SE.from_url(map_url)
+                response = SE.from_url(map_url, vars.CHROME_DRIVER_PATH)
             except Exception as e:
                 logging.error(f"Error occurred while fetching with SeleniumExtractor: {e}")
                 return [map_url]
@@ -127,7 +119,7 @@ class WebScraper:
             return None
         return response
         
-    def site_map_searching(self, parsed_site_maps:list, site_map_url:str):
+    def site_map_searching(self, parsed_site_maps:list, site_map_url:str, last_download:datetime):
         current_date = datetime.datetime.today()
         basic_sitemap = "sitemap.xml"
 
@@ -135,7 +127,7 @@ class WebScraper:
             parsed_site_maps = self.check_sub_map(parsed_site_maps[0])
             if len(parsed_site_maps) == 1:
                 #date time will be date time of the last check
-                xml_content = self.analyze_map(parsed_site_maps[0], "2024-07-30T00:00:00+00:00")
+                xml_content = self.analyze_map(parsed_site_maps[0], last_download)
                 if xml_content is not None:
                     return parsed_site_maps[0]
 
@@ -162,7 +154,7 @@ class WebScraper:
                             continue
                     sub_sitemaps = self.check_sub_map(site_map)
                     if len(sub_sitemaps) == 1:
-                        xml_content = self.analyze_map(sub_sitemaps[0], "2024-07-30T00:00:00+00:00")
+                        xml_content = self.analyze_map(sub_sitemaps[0], last_download)
                         if xml_content:
                             return sub_sitemaps[0]
                     else:
@@ -171,23 +163,22 @@ class WebScraper:
         return self.site_map_searching([basic_sitemap], site_map_url)
     
 
-    def fetch_and_parse_robots(self, site_map_url: str) -> str:
+    def fetch_and_parse_robots(self, site_map_url: str, last_download:datetime) -> str:
         response = self.get_robots_txt(site_map_url)
         rp = self.parse_robots_txt(response)
         #check for proper site map
         if rp.site_maps():
-            return self.site_map_searching(rp.site_maps(), site_map_url)
+            return self.site_map_searching(rp.site_maps(), site_map_url, last_download)
             #check content of the file
         else:
             print("From robot.txt were any links extracted")
             return None
 
 
-    def analyze_map(self, map_url:str, last_download:str) -> list:
-        last_download = parser.isoparse(last_download)
+    def analyze_map(self, map_url:str, last_download:datetime) -> list:
         response = self.check_accessibility(map_url)
         if not response:
-            response = SE.from_url(map_url)
+            response = SE.from_url(map_url, vars.CHROME_DRIVER_PATH)
         else:
             response = response.text
         
@@ -253,29 +244,21 @@ class WebScraper:
         return articles
 
 
-    def web_scraping(self, site_urls: list):
+    def from_url(self, site_url: list, last_download:datetime):
         index = 0
         articles = []
-        for site_link in site_urls:
-            print(f"\nFor this site({site_link}) following pages:")
-            #use robot file to get to sitemap
-            current_site_map = self.fetch_and_parse_robots(site_link)
-            #analyzing site map
-            xml_content = self.analyze_map(current_site_map, "2024-08-01T00:00:00+00:00")
-            for page_link in xml_content:
-                fetched_article = NewsPlease.from_url(page_link["link"])
-                if fetched_article:
-                    articles.append(fetched_article)
-                    print(articles[index].title)
-                    index += 1
-                else:
-                    print("!!!Information from that article couldn't be fetched!!!")
-        #ai analyze and db insertion
-        
-        
-def main():
-    scraper = WebScraper()
-    scraper.web_scraping(vars._tech_websites)
-
-if __name__ == "__main__":
-    main()
+        print(f"\nFor this site({site_url}) following pages:")
+        #use robot file to get to sitemap
+        current_site_map = self.fetch_and_parse_robots(site_url, last_download)
+        #analyzing site map
+        xml_content = self.analyze_map(current_site_map, last_download)
+        #going through every link of sitemap
+        for page_link in xml_content:
+            fetched_article = NewsPlease.from_url(page_link["link"])
+            if fetched_article:
+                articles.append(fetched_article)
+                print(articles[index].title)
+                index += 1
+            else:
+                print("!!!Information from that article couldn't be fetched!!!")
+        return articles
