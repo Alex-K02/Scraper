@@ -1,8 +1,6 @@
 
 import os, sys
 from .news_please.newsplease import NewsPlease 
-#from dataFetching import vars
-#from dataFetching.news_please.newsplease import NewsPlease
 import requests, logging
 import xml.etree.ElementTree as ET
 import datetime, re
@@ -35,7 +33,6 @@ logging.getLogger("newspaper.network").setLevel(logging.ERROR)
 
 
 class WebScraper:
-
     def get_robots_txt(self, url: str) -> str:
         '''Robots exclusion standard'''
 
@@ -158,9 +155,9 @@ class WebScraper:
                         if xml_content:
                             return sub_sitemaps[0]
                     else:
-                        return self.site_map_searching(sub_sitemaps, site_map_url)
+                        return self.site_map_searching(sub_sitemaps, site_map_url, last_download)
                 
-        return self.site_map_searching([basic_sitemap], site_map_url)
+        return self.site_map_searching([basic_sitemap], site_map_url, last_download)
     
 
     def fetch_and_parse_robots(self, site_map_url: str, last_download:datetime) -> str:
@@ -176,6 +173,13 @@ class WebScraper:
 
 
     def analyze_map(self, map_url:str, last_download:datetime) -> list:
+        #checking if the url is valid()
+        def url_analyze(url:str) -> bool:
+            for val in vars.url_stopwords:
+                if re.match(val, url):
+                    return True
+            return False
+        
         response = self.check_accessibility(map_url)
         if not response:
             response = SE.from_url(map_url, vars.CHROME_DRIVER_PATH)
@@ -195,8 +199,8 @@ class WebScraper:
             pub_date = None
 
             link = url.find('ns0:loc', namespaces).text
-            #check that domain is not the case
-            if link in map_url:
+            #check that domain is not the case url_analyze(link) or 
+            if (link in map_url or url_analyze(link)):
                 continue
 
             news = url.find('ns1:news', namespaces)
@@ -232,6 +236,7 @@ class WebScraper:
                 last_download = last_download.replace(tzinfo=datetime.timezone.utc)  # Assuming UTC if no timezone info is provided
 
             #checking relevance of the article
+            #TODO: check
             if pub_date > last_download:
                 #checking the keywords
                 if not keywords or any(elem in vars.article_key_words for elem in keywords):
@@ -241,24 +246,25 @@ class WebScraper:
                         "title": title,
                         "keywords": keywords
                     })
+            else:
+                if not articles:
+                    articles = [None]
         return articles
 
 
     def from_url(self, site_url: list, last_download:datetime):
-        index = 0
         articles = []
         print(f"\nFor this site({site_url}) following pages:")
         #use robot file to get to sitemap
         current_site_map = self.fetch_and_parse_robots(site_url, last_download)
         #analyzing site map
         xml_content = self.analyze_map(current_site_map, last_download)
-        #going through every link of sitemap
+        #going through every link extracted from a sitemap
         for page_link in xml_content:
-            fetched_article = NewsPlease.from_url(page_link["link"])
-            if fetched_article:
-                articles.append(fetched_article)
-                print(articles[index].title)
-                index += 1
-            else:
-                print("!!!Information from that article couldn't be fetched!!!")
+            if page_link is not None:
+                fetched_article = NewsPlease.from_url(page_link["link"])
+                if fetched_article and fetched_article.language == "en":
+                    articles.append(fetched_article)
+                else:
+                    print("!!!Information from that article couldn't be fetched!!! OR Language was not English")
         return articles
