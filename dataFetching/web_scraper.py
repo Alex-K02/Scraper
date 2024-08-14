@@ -236,7 +236,6 @@ class WebScraper:
                 last_download = last_download.replace(tzinfo=datetime.timezone.utc)  # Assuming UTC if no timezone info is provided
 
             #checking relevance of the article
-            #TODO: check
             if pub_date > last_download:
                 #checking the keywords
                 if not keywords or any(elem in vars.article_key_words for elem in keywords):
