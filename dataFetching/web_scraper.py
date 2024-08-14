@@ -179,7 +179,6 @@ class WebScraper:
                 if re.match(val, url):
                     return True
             return False
-        
         response = self.check_accessibility(map_url)
         if not response:
             response = SE.from_url(map_url, vars.CHROME_DRIVER_PATH)
@@ -236,6 +235,7 @@ class WebScraper:
                 last_download = last_download.replace(tzinfo=datetime.timezone.utc)  # Assuming UTC if no timezone info is provided
 
             #checking relevance of the article
+            #TODO: check
             if pub_date > last_download:
                 #checking the keywords
                 if not keywords or any(elem in vars.article_key_words for elem in keywords):
