@@ -34,7 +34,6 @@ class NewsApp:
 
 if __name__ == "__main__":
     last_time_working = datetime.today().isoformat()
-
     while True:
         newsapp = NewsApp()
         newsapp.start_program(last_time_working)

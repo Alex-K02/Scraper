@@ -166,7 +166,6 @@ class WebScraper:
         #check for proper site map
         if rp.site_maps():
             return self.site_map_searching(rp.site_maps(), site_map_url, last_download)
-            #check content of the file
         else:
             print("From robot.txt were any links extracted")
             return None
@@ -179,6 +178,7 @@ class WebScraper:
                 if re.match(val, url):
                     return True
             return False
+        
         response = self.check_accessibility(map_url)
         if not response:
             response = SE.from_url(map_url, vars.CHROME_DRIVER_PATH)

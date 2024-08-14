@@ -82,7 +82,7 @@ class DBHandler:
             logging.exception("An error occurred during the operation")
             return []
     
-    def article_data_instertion(self, articles: list, keywords:str):
+    def article_data_instertion(self, articles: list):
         for article in articles:
             article_id = str(uuid.uuid4())
             title = article.title
@@ -109,15 +109,18 @@ class DBHandler:
                 print(f"Not full informaiton: {link}")
                 continue
 
-            if keywords:
-                keywords = ','.join(article.keywords)  # Assuming keywords is a list
+            keywords = []
+            if article.keywords:
+                for group in article.keywords:
+                    keywords.append(','.join(article.keywords[group]))
             else:
                 keywords = ""
 
-            command = vars.ARTICLE_INSERTION_COMMAND
             try:
-                self.cursor.execute(command, (article_id, title, link, domain, description, main_content, pub_date, author, keywords))
-                logging.info(f"Successfully executed command: {command}")
+                self.cursor.execute(vars.ARTICLE_INSERTION_COMMAND, (article_id, title, link, domain, description, main_content, pub_date, author))
+                self.cursor.execute(vars.KEYWORDS_INSERTION_COMMAND, (article_id, keywords[0], keywords[1], keywords[2], keywords[3], keywords[4], keywords[5]))
+                logging.info(f"\nSuccessfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")
+                logging.info(f"Successfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")
             except mysql.connector.Error as err:
                 if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                     logging.error("Something is wrong with your user name or password")
