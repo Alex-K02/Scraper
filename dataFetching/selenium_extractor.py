@@ -38,7 +38,6 @@ class SeleniumExtractor:
                 ai_module = AIModule(vars.AI_API_KEY)
                 urls = ai_module.extract_urls_from_sitemap(page_source)
                 return urls
-
         except Exception as e:
             logging.exception(f"An error occurred while processing the URL: {url}")
             return ""

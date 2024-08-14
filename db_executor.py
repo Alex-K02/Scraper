@@ -82,30 +82,45 @@ class DBHandler:
             logging.exception("An error occurred during the operation")
             return []
     
-    def article_data_instertion(config, articles: list, keywords:str):
-        try:
-            with mysql.connector.connect(**config) as conn:
-                with conn.cursor() as cursor:
-                    for article in articles:
-                        article_id = str(uuid.uuid4())
-                        title = article.title
-                        link = article.url
-                        description = article.description
-                        main_content = article.maintext
-                        pub_date = article.date_publish
-                        author = article.authors[0] if article.authors else article.authors
-                        if not title or not link or not main_content or not pub_date or not author:
-                            print(f"Not full informaiton: {link}")
-                            continue
-                        if keywords:
-                            keywords = ', '.join(article.keywords)  # Assuming keywords is a list
-                        else:
-                            keywords = ""
+    def article_data_instertion(self, articles: list):
+        for article in articles:
+            article_id = str(uuid.uuid4())
+            title = article.title
+            link = article.url
+            domain = article.source_domain
+            description = article.description
 
-            command = vars.ARTICLE_INSERTION_COMMAND
+            main_content = article.maintext
+            if len(main_content) > 65535:
+                print("Main text size is bigger than possible")
+                continue
+
+            pub_date = article.date_publish
+            
+            if article.authors:
+                if article.authors[0] == "Written":
+                    author = article.authors[1]
+                else:
+                     author = article.authors[0]
+            else:
+                author = article.authors
+
+            if not title or not link or not main_content or not pub_date or not author:
+                print(f"Not full informaiton: {link}")
+                continue
+
+            keywords = []
+            if article.keywords:
+                for group in article.keywords:
+                    keywords.append(','.join(article.keywords[group]))
+            else:
+                keywords = ""
+
             try:
-                self.cursor.execute(command, (article_id, title, link, domain, description, main_content, pub_date, author, keywords))
-                logging.info(f"Successfully executed command: {command}")
+                self.cursor.execute(vars.ARTICLE_INSERTION_COMMAND, (article_id, title, link, domain, description, main_content, pub_date, author))
+                self.cursor.execute(vars.KEYWORDS_INSERTION_COMMAND, (article_id, keywords[0], keywords[1], keywords[2], keywords[3], keywords[4], keywords[5]))
+                logging.info(f"\nSuccessfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")
+                logging.info(f"Successfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")
             except mysql.connector.Error as err:
                 if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                     logging.error("Something is wrong with your user name or password")

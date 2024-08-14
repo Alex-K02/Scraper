@@ -166,7 +166,6 @@ class WebScraper:
         #check for proper site map
         if rp.site_maps():
             return self.site_map_searching(rp.site_maps(), site_map_url, last_download)
-            #check content of the file
         else:
             print("From robot.txt were any links extracted")
             return None

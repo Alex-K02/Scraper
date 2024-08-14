@@ -1,11 +1,14 @@
 import vars
+import logging
 from dataFetching.web_scraper import WebScraper
 from db_executor import DBHandler as DBH
 from ai_integration.ai_module import AIModule
+
 from dateutil import parser
 from datetime import datetime
 import time
 
+logging.basicConfig(level=logging.INFO)
 
 class NewsApp:
     def __init__(self, dbhandler=None, scraper=None, ai_module=None):
@@ -22,19 +25,18 @@ class NewsApp:
             articles = self.scraper.from_url(url, last_working_time)
             print(f"Articles were successfully fetched from: {url}!")
             if len(articles) > 0:
-                self.dbhandler.is_article_unique(articles)
-                articles = self.ai_module.analyze_keywords(articles)
+                articles = self.dbhandler.is_article_unique(articles)
+                articles = self.ai_module.analyze_keywords(articles, vars.response_delay)
                 self.dbhandler.article_data_instertion(articles)
                 print(f"Articles were successfully inserted in table!!!")
-                counter += 1
+            counter += 1
             print(f"{counter}/{len(vars._tech_websites)}")
         print("\nProgram working time = ", time.time() - start_time)
         print("\nInformation from all sites were successfully fetched")
     
 
 if __name__ == "__main__":
-    last_time_working = datetime.today().isoformat()
-
+    last_time_working = datetime.today().date().isoformat()
     while True:
         newsapp = NewsApp()
         newsapp.start_program(last_time_working)
