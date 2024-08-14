@@ -254,11 +254,13 @@ class WebScraper:
         xml_content = self.analyze_map(current_site_map, last_download)
         #going through every link of sitemap
         for page_link in xml_content:
-            fetched_article = NewsPlease.from_url(page_link["link"])
-            if fetched_article:
-                articles.append(fetched_article)
-                print(articles[index].title)
-                index += 1
-            else:
-                print("!!!Information from that article couldn't be fetched!!!")
+            if page_link is not None:
+                fetched_article = NewsPlease.from_url(page_link["link"])
+                if fetched_article:
+                    if fetched_article.language == "en":
+                        articles.append(fetched_article)
+                    else:
+                        print("Language is not English")
+                else:
+                    print("!!!Information from that article couldn't be fetched!!!")
         return articles
