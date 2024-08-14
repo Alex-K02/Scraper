@@ -83,7 +83,6 @@ class DBHandler:
             return []
     
     def article_data_instertion(config, articles: list, keywords:str):
-        try:
             with mysql.connector.connect(**config) as conn:
                 with conn.cursor() as cursor:
                     for article in articles:
