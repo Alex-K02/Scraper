@@ -54,6 +54,13 @@ class DBHandler:
                 else:
                     logging.error(err)
         self.connection.commit()
+    
+    def mysql_to_json(self, data, columns:list):
+        import json
+        # Convert the result to a list of dictionaries
+        results = [dict(zip(columns, row)) for row in data]
+        results_json = json.dumps(results, default=str)
+        return results_json
 
     def is_article_unique(self, articles: list) -> list:
         """Checks if the articles are unique by their link."""
@@ -82,6 +89,55 @@ class DBHandler:
             logging.exception("An error occurred during the operation")
             return []
     
+    def get_all_articles(self):
+        try:
+            self.cursor.execute(vars.ALL_ARTICLE_EXTRACTION_COMMAND)
+            # Fetch the column names
+            columns = [column[0] for column in self.cursor.description]
+            json_articles = self.mysql_to_json(self.cursor.fetchall(), columns)
+            self.connection.commit()
+            return json_articles
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                logging.error("Something is wrong with your user name or password")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                logging.error("Database does not exist")
+            else:
+                logging.error(err)
+    
+    def get_latest_articles(self, last_working_time:str):
+        from datetime import datetime
+        from dateutil import parser
+        try: 
+            #formatting from string iso format into sql format
+            parsed_time = parser.isoparse(last_working_time)
+            formatted_time = parsed_time.strftime('%Y-%m-%d %H:%M:%S')
+            last_working_time = datetime.strptime(formatted_time, '%Y-%m-%d %H:%M:%S')
+
+            self.cursor.execute(vars.LATEST_ARTICLE_EXTRACTION_COMMAND, (last_working_time, ))
+            # Fetch the column names
+            columns = [column[0] for column in self.cursor.description]
+            #convert sql to json
+            json_articles = self.mysql_to_json(self.cursor.fetchall(), columns)
+            self.connection.commit()
+            return json_articles
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                logging.error("Something is wrong with your user name or password")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                logging.error("Database does not exist")
+            else:
+                logging.error(err)
+
+    def delete_article(self, article_id):
+        try: 
+            self.cursor.execute(vars.ARTICLE_DELETION_COMMAND, (article_id, ))
+            self.connection.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error deleting article with id {article_id}: {e}", exc_info=True)
+            raise
+
     def article_data_instertion(self, articles: list):
         for article in articles:
             article_id = str(uuid.uuid4())
@@ -96,6 +152,7 @@ class DBHandler:
                 continue
 
             pub_date = article.date_publish
+            download_date = article.date_download
             
             if article.authors:
                 if article.authors[0] == "Written":
@@ -117,7 +174,7 @@ class DBHandler:
                 keywords = ""
 
             try:
-                self.cursor.execute(vars.ARTICLE_INSERTION_COMMAND, (article_id, title, link, domain, description, main_content, pub_date, author))
+                self.cursor.execute(vars.ARTICLE_INSERTION_COMMAND, (article_id, title, link, domain, description, main_content, pub_date, download_date, author))
                 self.cursor.execute(vars.KEYWORDS_INSERTION_COMMAND, (article_id, keywords[0], keywords[1], keywords[2], keywords[3], keywords[4], keywords[5]))
                 logging.info(f"\nSuccessfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")
                 logging.info(f"Successfully executed command: {vars.ARTICLE_INSERTION_COMMAND}")

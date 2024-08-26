@@ -199,7 +199,8 @@ class WebScraper:
 
             link = url.find('ns0:loc', namespaces).text
             #check that domain is not the case url_analyze(link) or 
-            if (link in map_url or url_analyze(link)):
+            #link in map_url or 
+            if (url_analyze(link)):
                 continue
 
             news = url.find('ns1:news', namespaces)

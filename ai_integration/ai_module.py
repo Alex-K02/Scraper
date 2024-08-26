@@ -21,10 +21,6 @@ class AIModule:
             # Log and return the response text
             logging.info(f"AI response: {response.text.strip()}")
             return response.text.strip()
-        except cohere.CohereError as e:
-            # Log detailed error information
-            logging.error(f"CohereError occurred: {e.message} | Status: {e.http_status} | Headers: {e.headers}")
-            return "An error occurred while processing your request."
         except Exception as e:
             # Catch any other exceptions that might occur
             logging.error(f"Unexpected error: {str(e)}")
@@ -43,7 +39,7 @@ class AIModule:
                     article.keywords = json.loads(response.text)
                     time.sleep(response_delay)
                 except Exception as e:
-                    logging.error(f"Error occurred: {e.message} | Status: {e.http_status} | Headers: {e.headers}")
+                    logging.error(f"Unexpected error: {str(e)}")
                     return []
             return articles
         except Exception as e:
