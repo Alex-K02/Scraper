@@ -267,7 +267,7 @@ class WebScraper:
                     if fetched_article.language == "en":
                         articles.append(fetched_article)
                     else:
-                        print("Language is not English")
+                        logging.info("Language is not English")
                 else:
-                    print("!!!Information from that article couldn't be fetched!!!")
+                    logging.info("!!!Information from that article couldn't be fetched!!!")
         return articles
