@@ -1,1 +1,1 @@
-# NewsApp
+# Scraper
