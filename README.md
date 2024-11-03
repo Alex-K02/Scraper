@@ -26,6 +26,13 @@ _The list of target **websites** is maintained in a separate configuration file.
 
 ## Event Scraper
 
-The Event Scraper is designed with an AI-driven approach to identify and extract detailed event information. This scraper is flexible and can interpret various event details. The output is being processed in json format.
+The Event Scraper leverages an AI-driven approach to accurately identify and extract structured event information. This scraper is designed for flexibility and can interpret various event details.
 
-_The list of the target **events** is maintained in a separate configuration file._
+### Configuration and Customization
+**Event List with Names:**
+The target websites list includes event names, which helps the AI model focus on relevant content.
+
+**Prompt and Output Structure:**
+The scraper uses a custom prompt that specifies the response format, ensuring consistent JSON outputs.
+
+_The list of the target **events** and prompt are maintained in a separate configuration file._

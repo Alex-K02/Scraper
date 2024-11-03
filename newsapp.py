@@ -35,7 +35,7 @@ class Scraper:
             try:
                 event_data = self.event_scraper.from_url(url)
                 json_event_data = self.ai_module.extract_data_from_html(
-                    event_data, url, event_name, vars.ONE_MORE_PROMPT
+                    event_data, url, event_name, vars.EVENTS_SCRAPE_PROMPT
                 )
                 self.dbhandler.insert_event_data(json_event_data, url)
                 print(f"Event data successfully processed for {event_name}.")
