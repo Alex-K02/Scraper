@@ -1,22 +1,24 @@
 import os, sys
-import json
-import re
 import requests
 import logging
 from playwright.sync_api import sync_playwright
-from cleaner import Cleaner
+from .cleaner import Cleaner
 import random, time
-from selenium_extractor import SeleniumExtractor
-from db_executor import DBHandler
+
+# Set the global logging level
+logging.basicConfig(level=logging.WARNING)
 
 PARENT_DIR = os.path.abspath(os.path.curdir)
 sys.path.insert(0, PARENT_DIR)
 
 import vars
-from ai_integration.ai_module import AIModule
 
+class EventScraper:
+    def __init__(self, db_handler, ai_module):
+        self.cleaner = Cleaner()
+        self.db_handler = db_handler
+        self.ai_module = ai_module
 
-class PlayWrightScraper:
     def request_page_content(self, url):
         try: 
             response = requests.get(url, headers=vars.headers)
@@ -53,34 +55,17 @@ class PlayWrightScraper:
             content = page.content()
             browser.close()
             return content
-
-def main():
-    cleaner = Cleaner()
-    aimodule = AIModule(api_key=vars.AI_API_KEY)
-    play_wright_scraper = PlayWrightScraper()
-    db_handler = DBHandler(vars.DB_EXTENDED_CONFIG)
-
-    prompt_response = []
-
-    i = 1
-    for event_name, url in vars._event_websites.items():
-        page_content = play_wright_scraper.request_page_content(url)
+        
+    def from_url(self, url):
+        page_content = self.request_page_content(url)
         if page_content:
-            print(f"original size = {len(page_content)}, {i}/{len(vars._event_websites)}, {url}")
+            print(f"original size = {len(page_content)}, for {url}")
             if len(page_content) > 230000:
-                page_content = cleaner.clean([page_content])
+                page_content = self.cleaner.clean([page_content])
                 print(f"new size = {len(page_content[0])}")
                 if len(page_content) > 230000:
-                    print(f"{i}/{len(vars._event_websites)}")
+                    print(f"Size for {url} is too big")
         if page_content:
-            json_event_data = aimodule.extract_data_from_html(page_content, url, event_name, vars.ONE_MORE_PROMPT)
-            prompt_response.append(json_event_data)
-            db_handler.insert_event_data(json_event_data, url)
+            return page_content
         else:
-            print(f"Was not parsed = {i}/{len(vars._event_websites)}")
-        i += 1
-
-    print("Fetching is done")
-    
-
-main()
+            print(f"Was not parsed = {url}")

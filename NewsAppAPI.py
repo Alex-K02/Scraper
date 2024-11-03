@@ -41,7 +41,7 @@ class ArticleTable(Resource):
             if 'from' in request.args:
                 table_name = request.args['from']
             else:
-                return {"message": "Bad Request. Parameter \"from\" should be given correctly"}, 400
+                return {"message": "Parameter \"from\" should be given correctly"}, 400
 
             if 'last_working_time' in request.args:
                 last_working_time_str = request.args['last_working_time']
@@ -80,4 +80,4 @@ api.add_resource(ArticleTable, vars.PATH_RESTAPI)
 api.add_resource(EventTable, vars.PATH_RESTAPI)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

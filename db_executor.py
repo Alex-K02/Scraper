@@ -6,7 +6,7 @@ import vars
 from dateutil import parser
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 
 class DBHandler:
     def __init__(self, config):
@@ -145,12 +145,30 @@ class DBHandler:
                 event_end_date = None  # There's no end date in this case
 
         return event_start_date, event_end_date
-    
+
     def convert(self, date):
-        day, time  = date.split("T")
-        if all(char == "0" for char in time):
-            return day
-        return date
+        if "T" in date:
+            day, time  = date.split("T")
+            if all(char == "0" for char in time):
+                return self.convert_to_datetime(day)
+        return self.convert_to_datetime(date)
+    
+    def convert_to_datetime(self, date_str):
+        from datetime import datetime
+        try:
+            # Try to parse the date string using dateutil's parser (more flexible)
+            date_obj = parser.parse(date_str)
+            print("Parsed with dateutil:", date_obj)
+        except Exception as ex1:
+            print("Error using dateutil parser:", ex1)
+            try:
+                # If the above fails, use strptime for specific known formats
+                date_obj = datetime.strptime(date_str, "%Y%m%dT%H%M%S%z")
+                print("Parsed with strptime:", date_obj)
+            except Exception as ex2:
+                print("Error using strptime:", ex2)
+                return None
+        return date_obj
         
     def insert_event_data(self, events, url):
         for event in events:
@@ -165,11 +183,10 @@ class DBHandler:
             dates = event_details.get("dates", "")
             start, end = self.parse_dates(dates)
             if start and end:
-                if "T" in start and "T" in end:
-                    start = self.convert(start)
-                    end = self.convert(end)
-                start = parser.parse(start)
-                end = parser.parse(end)
+                start = self.convert(start)
+                end = self.convert(end)
+                # if start < end:
+                #     logging.warning(f"Impossible date input for {url}!")
 
             location = event_details.get("location", "")
             event_type = event_details.get("type", "")
@@ -180,13 +197,15 @@ class DBHandler:
                 for topic in topics:
                     result += topic.lower() + ","
                 topics = result
-
+            
             speakers = event_details.get("speakers", "")
             if speakers or speakers == "Speakers or Exhibitors":
                 result = ""
                 for speaker in speakers:
                     result += speaker + ","
                 speakers = result
+            else:
+                speakers = ""
                 
 
             if event.get('registration_and_information'):
@@ -196,7 +215,7 @@ class DBHandler:
             link = url
             registration_link = registration_and_information.get("registration_url", "")
             description = registration_and_information.get("description", "")
-            price = registration_and_information.get("cost")
+            price = registration_and_information.get("cost", "")
 
             sponsors = registration_and_information.get("sponsors", "")
             if sponsors:
@@ -205,12 +224,14 @@ class DBHandler:
                     for sponsor in sponsors:
                         result += sponsor + ","
                     sponsors = result
+            else:
+                sponsors = ""
             
-            if not(event_type or location) or not topics or not description or not dates:
+            if not(event_type or location) or not topics or not description or not (start and end):
                 logging.warning(f"Not full information {url}")
                 continue
             if not self.is_event_unique(title, start, end):
-                logging.warning(f"This event is already stored{url}")
+                logging.warning(f"This event is already stored {url}")
                 continue
             try:
                 self.cursor.execute(vars.EVENT_INSERTION_COMMAND, (event_id, title, start, end, location, event_type, topics, speakers, link, registration_link, description, price, sponsors))
@@ -296,7 +317,6 @@ class DBHandler:
     
     def get_latest_articles(self, last_working_time:str):
         from datetime import datetime
-        from dateutil import parser
         try: 
             #formatting from string iso format into sql format
             parsed_time = parser.isoparse(last_working_time)

@@ -2,6 +2,7 @@ import vars
 import logging
 import cohere
 import time
+from requests.exceptions import Timeout
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,24 +33,32 @@ class AIModule:
             logging.error(f"Unexpected error: {str(e)}")
             return []
         
-    def extract_data_from_html(self, article_content, url, event_name, prompt):
-        try:
-            # Get the response from the client
-            if event_name:
-                response = self.client.chat(
-                    message=f"{prompt} Event title: {event_name}. Website source code(from this url: {url}):[{article_content}]"
-                )
-            else: 
-                response = self.client.chat(
-                    message=f"{prompt} Event title: {event_name}. Website source code(from this url: {url}):[{article_content}]"
-                )
-            # Parse and store the keywords
-            time.sleep(10)
-            response = self.verify_response(response.text)
-            return response
-        except Exception as e:
-            logging.error(f"Unexpected error: {str(e)}")
-            return []
+    def extract_data_from_html(self, article_content, url, event_name, prompt, max_retries=3, retry_delay=10):
+        for attempt in range(max_retries):
+            try:
+                # Get the response from the client
+                if event_name:
+                    response = self.client.chat(
+                        model='command-r-plus',
+                        message=f"{prompt} Event title: {event_name}. Website source code(from this url: {url}):[{article_content}]",
+                        max_tokens=4096,
+                    )
+                else: 
+                    print("Not new reponse")
+                    response = self.client.chat(
+                        model='command-r-plus',
+                        message=f"{prompt} Event title: {event_name}. Website source code(from this url: {url}):[{article_content}]",
+                        response_format={ "type": "json_object" }
+                    )
+                # Parse and store the keywords
+                response = self.verify_response(response.text)
+                return response
+            except Timeout:
+                print(f"Timeout occurred. Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            except Exception as e:
+                logging.error(f"Unexpected error: {str(e)}")
+                return []
         
     def from_url(self, url: str, prompt: str) -> str:
         """Generates a response from the AI model based on the provided URL and prompt."""
