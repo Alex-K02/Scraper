@@ -80,4 +80,4 @@ api.add_resource(ArticleTable, vars.PATH_RESTAPI)
 api.add_resource(EventTable, vars.PATH_RESTAPI)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(threaded=False)

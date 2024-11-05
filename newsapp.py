@@ -59,12 +59,26 @@ class Scraper:
 logging.basicConfig(level=logging.INFO)
 
 parser = argparse.ArgumentParser(
-                    prog='AboutIT',
-                    description='This program fetches data from different webistes. The using different techniques it extractes wanted information from the websites and adds it to the database'
+                    prog='Scraper',
+                    description='This program fetches data from specified websites, including news articles and events. Using various scraping techniques and AI-driven methods, it extracts relevant information and saves it to a database for organized access and analysis.'
                 )
 
-parser.add_argument('--sleep', default=300, help="Sleep time between working sessions of the program(in seconds) EXAMPLE (\"300\")")
-parser.add_argument('--delay', default=5, help="Delay time between ai requests of the program(in seconds) EXAMPLE (\"5\")")
+parser.add_argument(
+    '-s', '--sleep', 
+    default=300, 
+    help="Sleep time between working sessions of the program(in seconds) EXAMPLE (\"300\")"
+    )
+parser.add_argument(
+    '-d', '--delay', 
+    default=5, 
+    help="Delay time between ai requests of the program(in seconds) EXAMPLE (\"5\")"
+    )
+parser.add_argument(
+    '-p', '--prompt',
+    type=str,
+    help='Path to the JSON file with the AI prompt configuration. Defaults to "config/prompt_template.json".',
+    default='config/prompt_template.json'
+)
 #add arguments before 
 args = parser.parse_args()
 
