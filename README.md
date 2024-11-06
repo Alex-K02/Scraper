@@ -19,10 +19,13 @@ The scraper navigates to these pages, gathering URLs of individual articles.
 4. **Parsing HTML Content**:
 It then parses each article’s HTML with the News Please library to extract data like title, publication date, author, and main content.
 
-5. **Saving Unique Articles**:
-To avoid duplicates, only unique articles are saved after parsing.
+5. **AI-Powered Preference Adjustment**:
+A custom prompt is used to extract key terms that capture the main idea of each article. This enables the app to align content more accurately with user preferences by focusing on the most relevant keywords.
 
-_The list of target **websites** is maintained in a separate configuration file._
+6. **Storing Unique Articles and Keywords**:
+To avoid duplicates, only unique articles and associated keywords are saved after parsing.
+
+_The list of target **websites** and keywords extraction prompt are maintained in a separate configuration file._
 
 ## Event Scraper
 
