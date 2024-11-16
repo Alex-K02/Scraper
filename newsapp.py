@@ -73,20 +73,13 @@ parser.add_argument(
     default=5, 
     help="Delay time between ai requests of the program(in seconds) EXAMPLE (\"5\")"
     )
-parser.add_argument(
-    '-p', '--prompt',
-    type=str,
-    help='Path to the JSON file with the AI prompt configuration. Defaults to "config/prompt_template.json".',
-    default='config/prompt_template.json'
-)
-#add arguments before 
+
 args = parser.parse_args()
 
 DELAY = args.delay
 SLEEP_TIME = args.sleep
 
 if __name__ == "__main__":
-    #"2024-08-16"
     last_time_working = datetime.today().date().isoformat()
     while True:
         scraper = Scraper()
