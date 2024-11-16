@@ -17,21 +17,6 @@ import vars
 # Set the global logging level
 logging.basicConfig(level=logging.ERROR)
 
-# Set the logging level for urllib3, readability and requests to WARNING to suppress debug and info messages
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("readability.readability").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
-
-logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.WARNING)
-logging.getLogger("PIL.PngImagePlugin").setLevel(logging.WARNING)
-logging.getLogger("PIL.Image").setLevel(logging.WARNING)
-# Set the logging level for specific loggers to ERROR or CRITICAL to reduce verbosity
-logging.getLogger("news_please").setLevel(logging.WARNING)
-logging.getLogger("newsplease.crawler.response_decoder").setLevel(logging.ERROR)
-logging.getLogger("dataFetching.news_please.newsplease.pipeline.extractor.article_extractor").setLevel(logging.ERROR)
-logging.getLogger("newspaper.network").setLevel(logging.ERROR)
-
-
 class WebScraper:
     def get_robots_txt(self, url: str) -> str:
         '''Robots exclusion standard'''

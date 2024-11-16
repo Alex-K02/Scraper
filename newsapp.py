@@ -1,4 +1,3 @@
-import dateutil.parser
 import vars
 import logging
 from dataFetching.web_scraper import WebScraper
