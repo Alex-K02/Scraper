@@ -13,7 +13,7 @@ from ..newsplease.pipeline.extractor import article_extractor
 from ..newsplease.crawler.items import NewscrawlerItem
 from dotmap import DotMap
 from ..newsplease.pipeline.pipelines import ExtractedInformationStorage
-from newsplease.crawler.simple_crawler import SimpleCrawler
+from ..newsplease.crawler.simple_crawler import SimpleCrawler
 
 
 class EmptyResponseError(ValueError):

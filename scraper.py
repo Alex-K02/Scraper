@@ -23,8 +23,9 @@ class Scraper:
         last_working_time = dateutil.parser.isoparse(last_working_time)
         
         self.dbhandler.db_creation()
-        self.process_events()
+        
         self.process_articles(last_working_time)
+        self.process_events()
         
         print("\nProgram working time =", time.time() - start_time)
         print("\nInformation from all sites and events was successfully fetched")

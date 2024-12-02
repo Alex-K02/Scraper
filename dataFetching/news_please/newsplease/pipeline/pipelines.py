@@ -19,7 +19,7 @@ from typing_extensions import TypedDict, cast
 import scrapy
 
 import pymysql
-import psycopg2
+#import psycopg2
 from dateutil import parser as dateparser
 from elasticsearch import Elasticsearch
 from scrapy.exceptions import DropItem
