@@ -1,26 +1,19 @@
-import os
+import vars
 from db_executor import DBHandler
 from flask import Flask, request
 from flask_restful import Api, Resource
 import logging
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 api = Api(app)
 
-DB_EXTENDED_CONFIG = os.getenv('DB_EXTENDED_CONFIG')
-PATH_RESTAPI = os.getenv('PATH_RESTAPI')
-
 class ArticleTable(Resource):
     def delete(self):
         dbhandler = None
         try:
-            dbhandler = DBHandler(DB_EXTENDED_CONFIG)
+            dbhandler = DBHandler(vars.DB_EXTENDED_CONFIG)
             if 'id' not in request.args:
                 return {"message": "ID parameter is required"}, 400
             
@@ -44,7 +37,7 @@ class ArticleTable(Resource):
     def get(self):
         dbhandler = None
         try:
-            dbhandler = DBHandler(DB_EXTENDED_CONFIG)
+            dbhandler = DBHandler(vars.DB_EXTENDED_CONFIG)
             if 'from' in request.args:
                 table_name = request.args['from']
             else:
@@ -68,7 +61,7 @@ class EventTable(Resource):
     def get(self):
         dbhandler = None
         try:
-            dbhandler = DBHandler(DB_EXTENDED_CONFIG)
+            dbhandler = DBHandler(vars.DB_EXTENDED_CONFIG)
             if 'from' in request.args:
                 table_name = request.args['from']
             else:
@@ -83,8 +76,8 @@ class EventTable(Resource):
             if dbhandler:
                 dbhandler.close_connection()
 
-api.add_resource(ArticleTable, PATH_RESTAPI)
-api.add_resource(EventTable, PATH_RESTAPI)
+api.add_resource(ArticleTable, vars.PATH_RESTAPI)
+api.add_resource(EventTable, vars.PATH_RESTAPI)
 
 if __name__ == "__main__":
     app.run(threaded=False)
