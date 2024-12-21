@@ -3,6 +3,10 @@ from db_executor import DBHandler
 from flask import Flask, request
 from flask_restful import Api, Resource
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 
